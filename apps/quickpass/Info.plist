@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://apple.com">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>com.microdeck.quickpass</string>
+    <key>CFBundleDisplayName</key>
+    <string>QuickPass</string>
+    <key>CFBundleExecutable</key>
+    <string>quickpass</string>
+    <key>MicroDeckDescription</key>
+    <string>Cryptographically secure password generator</string>
+</dict>
+</plist>
