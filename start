@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+set -e
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BUILD_DIR="$ROOT_DIR/build"
+mkdir -p "$BUILD_DIR"
+
+build_host() {
+    echo "Building MicroDeck host..."
+    (cd "$ROOT_DIR/host" && go build -ldflags="-s -w" -o "$BUILD_DIR/microdeck" main.go)
+}
+
+build_app() {
+    APP_NAME="$1"
+    APP_SRC="$ROOT_DIR/apps/$APP_NAME"
+    if [ ! -d "$APP_SRC" ]; then
+        echo "Error: App '$APP_NAME' not found in apps/"
+        exit 1
+    fi
+    echo "Building micro-app: $APP_NAME..."
+    (cd "$APP_SRC" && go build -ldflags="-s -w" -o "$APP_SRC/$APP_NAME" main.go)
+}
+
+scaffold_app() {
+    NEW_NAME="$1"
+    TARGET_DIR="$ROOT_DIR/apps/$NEW_NAME"
+    if [ -d "$TARGET_DIR" ]; then
+        echo "Error: App '$NEW_NAME' already exists."
+        exit 1
+    fi
+    mkdir -p "$TARGET_DIR"
+    cat <<EOF > "$TARGET_DIR/Info.plist"
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://apple.com">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>com.microdeck.$NEW_NAME</string>
+    <key>CFBundleDisplayName</key>
+    <string>$NEW_NAME</string>
+    <key>CFBundleExecutable</key>
+    <string>$NEW_NAME</string>
+    <key>MicroDeckDescription</key>
+    <string>Custom MicroDeck utility</string>
+</dict>
+</plist>
+EOF
+
+    cat <<EOF > "$TARGET_DIR/main.go"
+package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("Hello from $NEW_NAME!")
+}
+EOF
+    echo "[OK] Created new micro-app at apps/$NEW_NAME"
+}
+
+case "$1" in
+    build)
+        build_host
+        for dir in "$ROOT_DIR/apps"/*; do
+            [ -d "$dir" ] && build_app "$(basename "$dir")"
+        done
+        ;;
+    new)
+        [ -z "$2" ] && echo "Usage: ./start new <app_name>" && exit 1
+        scaffold_app "$2"
+        ;;
+    install)
+        [ ! -f "$BUILD_DIR/microdeck" ] && build_host
+        [ -z "$2" ] && echo "Usage: ./start install <app_name>" && exit 1
+        build_app "$2"
+        "$BUILD_DIR/microdeck" install "$ROOT_DIR/apps/$2"
+        ;;
+    run|"")
+        [ ! -f "$BUILD_DIR/microdeck" ] && build_host
+        "$BUILD_DIR/microdeck"
+        ;;
+    *)
+        echo "Usage: ./start {build|new <name>|install <name>|run}"
+        exit 1
+        ;;
+esac
